@@ -73,3 +73,25 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# ===== Extra =======
+#Archivos del sistema
+
+.DS_Store
+Thumbs.db
+
+# VSCode configuración local
+
+.vscode/*
+
+# Logs y temporales del editor
+
+Saved/Logs/*
+Saved/Temp/*
+Saved/Crashes/*
+Saved/Autosaves/*
+
+# Cache adicional
+
+DerivedDataCache/Boot.ddc
+DerivedDataCache/Compressed.ddp
