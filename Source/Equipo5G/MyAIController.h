@@ -36,4 +36,5 @@ private:
     ACharacter* GetClosestPlayer() const;
 
     bool bCanSeePlayer = false;
+    float MoveUpdateTimer = 0.f;
 };

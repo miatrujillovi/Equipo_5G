@@ -1,7 +1,7 @@
 #include "MyAIController.h"
-#include "Engine/Engine.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h"
 
 AMyAIController::AMyAIController()
 {
@@ -30,7 +30,6 @@ AMyAIController::AMyAIController()
 void AMyAIController::BeginPlay()
 {
     Super::BeginPlay();
-    // Ya no usamos Behavior Tree — la lógica es directo en Tick
 }
 
 void AMyAIController::Tick(float DeltaTime)
@@ -38,32 +37,51 @@ void AMyAIController::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     if (!GetPawn()) return;
-    // DEBUG temporal
-    GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Red,
-        FString::Printf(TEXT("AI Tick - CanSee: %s"), bCanSeePlayer ? TEXT("true") : TEXT("false"))
-    );
+
     const float PanicRadius = 1500.f;
 
     ACharacter* Closest = GetClosestPlayer();
-    if (!Closest) return;
 
-    float DistToClosest = FVector::Dist(
-        GetPawn()->GetActorLocation(),
-        Closest->GetActorLocation()
-    );
+    // Actualizar timer
+    MoveUpdateTimer += DeltaTime;
 
-    if (bCanSeePlayer || DistToClosest < PanicRadius)
+    if (Closest)
     {
-        FVector AILocation = GetPawn()->GetActorLocation();
-        FVector PlayerLocation = Closest->GetActorLocation();
-        FVector FleeDirection = (AILocation - PlayerLocation).GetSafeNormal();
-        FVector FleeDestination = AILocation + (FleeDirection * 800.f);
+        float DistToClosest = FVector::Dist(
+            GetPawn()->GetActorLocation(),
+            Closest->GetActorLocation()
+        );
 
-        MoveToLocation(FleeDestination, 50.f);
+        if (bCanSeePlayer || DistToClosest < PanicRadius)
+        {
+            // MODO HUIDA — recalcula cada 0.2 segundos
+            if (MoveUpdateTimer >= 0.2f)
+            {
+                MoveUpdateTimer = 0.f;
+
+                FVector AILocation = GetPawn()->GetActorLocation();
+                FVector PlayerLocation = Closest->GetActorLocation();
+                FVector FleeDirection = (AILocation - PlayerLocation).GetSafeNormal();
+                FVector FleeDestination = AILocation + (FleeDirection * 800.f);
+
+                MoveToLocation(FleeDestination, 50.f);
+            }
+            return;
+        }
     }
-    else
+
+    // MODO WANDERING — camina a un punto random cada 3 segundos
+    if (MoveUpdateTimer >= 3.f)
     {
-        StopMovement();
+        MoveUpdateTimer = 0.f;
+
+        FVector AILocation = GetPawn()->GetActorLocation();
+        FVector RandomDirection = FMath::VRand();
+        RandomDirection.Z = 0.f;
+        RandomDirection.Normalize();
+
+        FVector WanderDestination = AILocation + (RandomDirection * 600.f);
+        MoveToLocation(WanderDestination, 50.f);
     }
 }
 
