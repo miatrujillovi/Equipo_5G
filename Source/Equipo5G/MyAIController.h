@@ -19,6 +19,10 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
+
+    float StartDelay = 2.f;
+    bool bReady = false;
+
     UPROPERTY(EditDefaultsOnly, Category = "AI")
     UBehaviorTree* BehaviorTree;
 
@@ -36,5 +40,5 @@ private:
     ACharacter* GetClosestPlayer() const;
 
     bool bCanSeePlayer = false;
-    float MoveUpdateTimer = 0.f;
+    float MoveUpdateTimer = 0.2f;
 };
