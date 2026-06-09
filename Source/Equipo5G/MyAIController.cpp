@@ -1,4 +1,5 @@
 #include "MyAIController.h"
+#include "NavigationSystem.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
@@ -13,7 +14,7 @@ AMyAIController::AMyAIController()
     SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
     SightConfig->SightRadius = 1500.f;
     SightConfig->LoseSightRadius = 2000.f;
-    SightConfig->PeripheralVisionAngleDegrees = 180.f;
+    SightConfig->PeripheralVisionAngleDegrees = 360.f;
     SightConfig->SetMaxAge(0.f);
     SightConfig->DetectionByAffiliation.bDetectEnemies = true;
     SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
@@ -36,6 +37,16 @@ void AMyAIController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    if (!bReady)
+    {
+        StartDelay -= DeltaTime;
+        if (StartDelay <= 0.f)
+        {
+            bReady = true;
+        }
+        return;
+    }
+
     if (!GetPawn()) return;
 
     const float PanicRadius = 1500.f;
@@ -51,24 +62,39 @@ void AMyAIController::Tick(float DeltaTime)
             GetPawn()->GetActorLocation(),
             Closest->GetActorLocation()
         );
+        GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green,
+        FString::Printf(TEXT("Dist: %.0f - Moving: %s"), 
+            DistToClosest,
+            MoveUpdateTimer >= 0.2f ? TEXT("YES") : TEXT("NO")
+        )
+    );
+    if (DistToClosest < PanicRadius)
+    {
+    if (MoveUpdateTimer >= 0.2f)
+    {
+        MoveUpdateTimer = 0.f;
 
-        if (bCanSeePlayer || DistToClosest < PanicRadius)
+        FVector AILocation = GetPawn()->GetActorLocation();
+        FVector PlayerLocation = Closest->GetActorLocation();
+        FVector FleeDirection = (AILocation - PlayerLocation).GetSafeNormal();
+        FVector FleeDestination = AILocation + (FleeDirection * 1200.f);
+
+        // Proyectar el destino al NavMesh más cercano
+        FNavLocation ProjectedLocation;
+        UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+        if (NavSys && NavSys->ProjectPointToNavigation(FleeDestination, ProjectedLocation, FVector(500.f, 500.f, 500.f)))
         {
-            // MODO HUIDA — recalcula cada 0.2 segundos
-            if (MoveUpdateTimer >= 0.2f)
-            {
-                MoveUpdateTimer = 0.f;
-
-                FVector AILocation = GetPawn()->GetActorLocation();
-                FVector PlayerLocation = Closest->GetActorLocation();
-                FVector FleeDirection = (AILocation - PlayerLocation).GetSafeNormal();
-                FVector FleeDestination = AILocation + (FleeDirection * 800.f);
-
-                MoveToLocation(FleeDestination, 50.f);
-            }
-            return;
+            MoveToLocation(ProjectedLocation.Location, 50.f);
+        }
+        else
+        {
+            // Si no encuentra punto válido, muévete en dirección opuesta corta
+            MoveToLocation(AILocation + (FleeDirection * 300.f), 50.f);
         }
     }
+    return;
+    }
+}
 
     // MODO WANDERING — camina a un punto random cada 3 segundos
     if (MoveUpdateTimer >= 3.f)
