@@ -48,18 +48,24 @@ void AMyAIController::Tick(float DeltaTime)
     }
 
     if (!GetPawn()) return;
-    ACharacter* BombChar = Cast<ACharacter>(GetPawn());
-    if (BombChar)
+
+ACharacter* BombPawn = Cast<ACharacter>(GetPawn());
+if (BombPawn)
+{
+    FProperty* EstadoProp = BombPawn->GetClass()->FindPropertyByName(FName("EstadoBomba"));
+    if (EstadoProp)
     {
-        // Obtener el valor del enum EstadoBomba
-        UFunction* GetStateFunc = BombChar->FindFunction(FName("GetEstadoBomba"));
-        if (GetStateFunc)
+        uint8* PropValue = EstadoProp->ContainerPtrToValuePtr<uint8>(BombPawn);
+        uint8 Estado = *PropValue;
+
+        // 0 = Run, 1 = Grabbed, 2 = Down
+        if (Estado != 0)
         {
-            // Si no está en Run, detener movimiento
             StopMovement();
             return;
         }
     }
+}
 
     const float PanicRadius = 1500.f;
 
